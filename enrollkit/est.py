@@ -22,18 +22,18 @@ __all__ = [
 
 
 async def simple_enroll(endpoint: str, csr: bytes, auth: Auth) -> Certificate:
-    """Pending behaviour defined by RFC 7030.
+    """Pending behaviour defined by RFC 7030 sec. 4.2.1.
 
     Not implemented yet. See the ``est.simple_enroll()`` row in ROADMAP.md; this stub
     raises on purpose so nothing downstream mistakes it for working code.
     """
-    raise NotImplementedError("simple_enroll() is not implemented: RFC 7030")
+    raise NotImplementedError("simple_enroll() is not implemented: RFC 7030 sec. 4.2.1")
 
 
 async def ca_certs(endpoint: str, auth: Auth) -> list:
-    """Pending behaviour defined by RFC 7030.
+    """Pending behaviour defined by RFC 7030 sec. 4.1.
 
     Not implemented yet. See the ``est.ca_certs()`` row in ROADMAP.md; this stub raises
     on purpose so nothing downstream mistakes it for working code.
     """
-    raise NotImplementedError("ca_certs() is not implemented: RFC 7030")
+    raise NotImplementedError("ca_certs() is not implemented: RFC 7030 sec. 4.1")

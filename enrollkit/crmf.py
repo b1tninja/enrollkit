@@ -21,9 +21,9 @@ __all__ = [
 
 
 def build_request(public_key: object, subject: str, validity: Validity) -> CrmfRequest:
-    """Pending behaviour defined by RFC 4211.
+    """Pending behaviour defined by RFC 4211 sec. 5.
 
     Not implemented yet. See the ``crmf.build_request()`` row in ROADMAP.md; this stub
     raises on purpose so nothing downstream mistakes it for working code.
     """
-    raise NotImplementedError("build_request() is not implemented: RFC 4211")
+    raise NotImplementedError("build_request() is not implemented: RFC 4211 sec. 5")

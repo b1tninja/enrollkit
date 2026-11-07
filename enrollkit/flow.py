@@ -33,9 +33,9 @@ async def enroll(endpoint: str, request: CrmfRequest, auth: Auth) -> EnrollmentR
 
 
 async def poll_until_ready(endpoint: str, transaction: bytes, budget: Budget) -> EnrollmentResult:
-    """Pending behaviour defined by RFC 9810.
+    """Pending behaviour defined by RFC 9810 sec. 5.3.22.
 
     Not implemented yet. See the ``flow.poll_until_ready()`` row in ROADMAP.md; this stub
     raises on purpose so nothing downstream mistakes it for working code.
     """
-    raise NotImplementedError("poll_until_ready() is not implemented: RFC 9810")
+    raise NotImplementedError("poll_until_ready() is not implemented: RFC 9810 sec. 5.3.22")

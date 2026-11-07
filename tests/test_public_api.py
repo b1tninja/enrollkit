@@ -15,15 +15,15 @@ import pytest
 import enrollkit as package
 
 SURFACE = [
-    ("messages", "build_cr", "RFC 9810"),
-    ("messages", "parse", "RFC 9810"),
-    ("protection", "protect", "RFC 9810"),
-    ("protection", "verify_protection", "RFC 9810"),
-    ("crmf", "build_request", "RFC 4211"),
+    ("messages", "build_cr", "RFC 9810 sec. 5.3.3"),
+    ("messages", "parse", "RFC 9810 sec. 5.1"),
+    ("protection", "protect", "RFC 9810 sec. 5.1.3"),
+    ("protection", "verify_protection", "RFC 9810 sec. 5.1.3"),
+    ("crmf", "build_request", "RFC 4211 sec. 5"),
     ("flow", "enroll", "RFC 9810"),
-    ("flow", "poll_until_ready", "RFC 9810"),
-    ("est", "simple_enroll", "RFC 7030"),
-    ("est", "ca_certs", "RFC 7030"),
+    ("flow", "poll_until_ready", "RFC 9810 sec. 5.3.22"),
+    ("est", "simple_enroll", "RFC 7030 sec. 4.2.1"),
+    ("est", "ca_certs", "RFC 7030 sec. 4.1"),
 ]
 
 
@@ -41,7 +41,10 @@ def test_surface_is_documented(module_name, fn, cite):
     module = importlib.import_module(package.__name__ + "." + module_name)
     target = getattr(module, fn)
     assert target.__doc__, fn + " needs a docstring"
-    assert cite in target.__doc__, fn + " must cite the document that defines it"
+    # Docstrings are wrapped, so a long citation can span a line break; compare words, not layout.
+    assert " ".join(cite.split()) in " ".join(target.__doc__.split()), (
+        fn + " must cite the document that defines it"
+    )
 
 
 @pytest.mark.parametrize(("module_name", "fn", "cite"), SURFACE)

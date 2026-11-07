@@ -50,7 +50,7 @@ document, which is the honest grain size for a plan. See [docs/rfc-map.md](docs/
 
 ### Errata watch
 
-- RFC 9810 already carries 4 verified errata eleven months after publication. Implement 9810, not the 4210 text that most tutorials still copy.
+- RFC 9810 already carries 4 verified errata as of 2026-11-07 (rfclib). Implement 9810, not the 4210 text that most tutorials still copy.
 - RFC 7030 carries 3 verified errata and is updated by RFC 8951, RFC 8996 and RFC 9908.
 - RFC 4211 carries 2 verified errata and is updated by RFC 9045. RFC 9811 obsoletes RFC 6712 and, with RFC 9810, RFC 9480.
 - RFC 4210 is OBSOLETE: cite it only when explaining a legacy server.
@@ -83,7 +83,8 @@ Declared as a floor with no ceiling: the application that installs this library 
 ## Install
 
 ```bash
-git clone https://github.com/b1tninja/enrollkit.cd enrollkit
+git clone https://github.com/b1tninja/enrollkit.git
+cd enrollkit
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\\Scripts\\Activate.ps1
 pip install -e ".[dev]"

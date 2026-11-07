@@ -11,22 +11,26 @@ behaviour regressed. Reading the code and agreeing with it is not enough. That i
 Legend: `[ok]` implemented and pinned by a named test -- `[part]` partial, with what is
 missing stated -- `[ ]` not implemented -- `[no]` deliberate non-goal.
 
+A Where cell marked `(to be written)` names the test that will pin the row once it exists; no
+such test has been written yet, and the row cannot leave `[ ]` until it has. The Milestone
+column places the row on the ladder in section 2, and `-` means it is not placed yet.
+
 Update the affected row in the same commit that changes the behaviour. A row and its test
 drift apart within one release, and the document becomes useless exactly when it is needed.
 
 ## 1. Obligations
 
-| Obligation | Spec | Status | Where |
-|---|---|---|---|
-| `messages.build_cr()` | RFC 9810 | `[ ]` | `tests/test_obligations.py::build_cr` |
-| `messages.parse()` | RFC 9810 | `[ ]` | `tests/test_obligations.py::parse` |
-| `protection.protect()` | RFC 9810 | `[ ]` | `tests/test_obligations.py::protect` |
-| `protection.verify_protection()` | RFC 9810 | `[ ]` | `tests/test_obligations.py::verify_protection` |
-| `crmf.build_request()` | RFC 4211 | `[ ]` | `tests/test_obligations.py::build_request` |
-| `flow.enroll()` | RFC 9810 | `[ ]` | `tests/test_obligations.py::enroll` |
-| `flow.poll_until_ready()` | RFC 9810 | `[ ]` | `tests/test_obligations.py::poll_until_ready` |
-| `est.simple_enroll()` | RFC 7030 | `[ ]` | `tests/test_obligations.py::simple_enroll` |
-| `est.ca_certs()` | RFC 7030 | `[ ]` | `tests/test_obligations.py::ca_certs` |
+| Obligation | Spec | Status | Where | Milestone |
+|---|---|---|---|---|
+| `messages.build_cr()` | RFC 9810 sec. 5.3.3 | `[ ]` | `tests/test_obligations.py::test_build_cr` (to be written) | M1 |
+| `messages.parse()` | RFC 9810 sec. 5.1 | `[ ]` | `tests/test_obligations.py::test_parse` (to be written) | M1 |
+| `protection.protect()` | RFC 9810 sec. 5.1.3 | `[ ]` | `tests/test_obligations.py::test_protect` (to be written) | M2 |
+| `protection.verify_protection()` | RFC 9810 sec. 5.1.3 | `[ ]` | `tests/test_obligations.py::test_verify_protection` (to be written) | M2 |
+| `crmf.build_request()` | RFC 4211 sec. 5 | `[ ]` | `tests/test_obligations.py::test_build_request` (to be written) | M3 |
+| `flow.enroll()` | RFC 9810 | `[ ]` | `tests/test_obligations.py::test_enroll` (to be written) | M4 |
+| `flow.poll_until_ready()` | RFC 9810 sec. 5.3.22 | `[ ]` | `tests/test_obligations.py::test_poll_until_ready` (to be written) | M4 |
+| `est.simple_enroll()` | RFC 7030 sec. 4.2.1 | `[ ]` | `tests/test_obligations.py::test_simple_enroll` (to be written) | M5 |
+| `est.ca_certs()` | RFC 7030 sec. 4.1 | `[ ]` | `tests/test_obligations.py::test_ca_certs` (to be written) | M5 |
 
 ## 2. Milestones
 
@@ -42,7 +46,7 @@ the code existing. Coverage in `pyproject.toml` ratchets in the same commit.
 
 ## 3. Errata watch
 
-- RFC 9810 already carries 4 verified errata eleven months after publication. Implement 9810, not the 4210 text that most tutorials still copy.
+- RFC 9810 already carries 4 verified errata as of 2026-11-07 (rfclib). Implement 9810, not the 4210 text that most tutorials still copy.
 - RFC 7030 carries 3 verified errata and is updated by RFC 8951, RFC 8996 and RFC 9908.
 - RFC 4211 carries 2 verified errata and is updated by RFC 9045. RFC 9811 obsoletes RFC 6712 and, with RFC 9810, RFC 9480.
 - RFC 4210 is OBSOLETE: cite it only when explaining a legacy server.
@@ -57,7 +61,7 @@ the code existing. Coverage in `pyproject.toml` ratchets in the same commit.
 
 ## 5. Open questions
 
-- none recorded yet
+- which section of RFC 9810 `flow.enroll()` is accepted against: the transaction spans the certification request, response and confirmation exchanges, so its Spec cell stays the bare RFC until that is decided
 
 ## 6. Publication checklist
 

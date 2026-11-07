@@ -22,18 +22,18 @@ __all__ = [
 
 
 def protect(msg: PkiMessage, secret: bytes) -> PkiMessage:
-    """Pending behaviour defined by RFC 9810.
+    """Pending behaviour defined by RFC 9810 sec. 5.1.3.
 
     Not implemented yet. See the ``protection.protect()`` row in ROADMAP.md; this stub
     raises on purpose so nothing downstream mistakes it for working code.
     """
-    raise NotImplementedError("protect() is not implemented: RFC 9810")
+    raise NotImplementedError("protect() is not implemented: RFC 9810 sec. 5.1.3")
 
 
 def verify_protection(msg: PkiMessage, trust: Trust) -> None:
-    """Pending behaviour defined by RFC 9810.
+    """Pending behaviour defined by RFC 9810 sec. 5.1.3.
 
     Not implemented yet. See the ``protection.verify_protection()`` row in ROADMAP.md;
     this stub raises on purpose so nothing downstream mistakes it for working code.
     """
-    raise NotImplementedError("verify_protection() is not implemented: RFC 9810")
+    raise NotImplementedError("verify_protection() is not implemented: RFC 9810 sec. 5.1.3")

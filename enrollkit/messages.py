@@ -22,18 +22,18 @@ __all__ = [
 
 
 def build_cr(request: CrmfRequest, sender: str, recipient: str | None) -> PkiMessage:
-    """Pending behaviour defined by RFC 9810.
+    """Pending behaviour defined by RFC 9810 sec. 5.3.3.
 
     Not implemented yet. See the ``messages.build_cr()`` row in ROADMAP.md; this stub
     raises on purpose so nothing downstream mistakes it for working code.
     """
-    raise NotImplementedError("build_cr() is not implemented: RFC 9810")
+    raise NotImplementedError("build_cr() is not implemented: RFC 9810 sec. 5.3.3")
 
 
 def parse(raw: bytes) -> PkiMessage:
-    """Pending behaviour defined by RFC 9810.
+    """Pending behaviour defined by RFC 9810 sec. 5.1.
 
     Not implemented yet. See the ``messages.parse()`` row in ROADMAP.md; this stub raises
     on purpose so nothing downstream mistakes it for working code.
     """
-    raise NotImplementedError("parse() is not implemented: RFC 9810")
+    raise NotImplementedError("parse() is not implemented: RFC 9810 sec. 5.1")
