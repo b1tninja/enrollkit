@@ -11,9 +11,9 @@ The message definitions are ours, written on asn1core. RFC 9810 Appendix F is an
 from __future__ import annotations
 
 import datetime
+import secrets
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from asn1core import (
     Asn1Error,
@@ -26,11 +26,6 @@ from asn1core import (
 )
 
 from . import _der
-
-if TYPE_CHECKING:
-    from typing import Any
-
-    CrmfRequest = Any  # placeholder: give it a real type in the milestone that needs it
 
 __all__ = [
     "CMP_1999",
@@ -83,6 +78,7 @@ _DIRECTORY_NAME = 4
 _NULL_DN = bytes.fromhex("a4023000")  # RFC 9810 sec. 5.1.1: an empty RDNSequence, 0x3000, in [4]
 
 _SEQUENCE = 16
+_SEQUENCE_BYTE = 0x30  # the identifier octet of a universal constructed SEQUENCE
 _INTEGER = 2
 _OID = 6
 _OCTET_STRING = 4
@@ -302,13 +298,61 @@ def _general_info(node: Node) -> tuple[bytes, ...]:
     return tuple(child.raw for child in node.children)
 
 
-def build_cr(request: CrmfRequest, sender: str, recipient: str | None) -> PkiMessage:
-    """Pending behaviour defined by RFC 9810 sec. 5.3.3.
+def build_cr(
+    request: bytes,
+    sender: str,
+    recipient: str | None,
+    *,
+    pvno: int = CMP_2000,
+    message_time: datetime.datetime | None = None,
+    transaction_id: bytes | None = None,
+    sender_nonce: bytes | None = None,
+    implicit_confirm: bool = False,
+    cert_profile: Sequence[str] = (),
+) -> PkiMessage:
+    """A Certification Request message (``cr``) around a CertReqMessages, RFC 9810 sec. 5.3.3.
 
-    Not implemented yet. See the ``messages.build_cr()`` row in ROADMAP.md; this stub
-    raises on purpose so nothing downstream mistakes it for working code.
+    ``request`` is the ``CertReqMessages`` value (``bodies.cert_req_messages_content``). The body
+    is the ``[2]`` alternative that wraps it. The header follows the RFC 9483 sec. 3.1 rules for
+    a MAC-protected request: ``sender`` is the name the PKI management entity uses to find the
+    shared secret, written as a directoryName with that commonName and repeated as senderKID;
+    ``recipient`` is the commonName of the CA, or the NULL-DN when ``None`` (sec. 3.1: "the
+    NULL-DN MUST be used" when the recipient is not known). ``transaction_id`` and ``sender_nonce``
+    are 128 random bits each unless given (so a test can fix them). ``pvno`` defaults to cmp2000,
+    which sec. 3.1 asks for unless EnvelopedData is expected. ``implicit_confirm`` and
+    ``cert_profile`` add those generalInfo items.
+
+    The message is not protected: it has no protectionAlg and no protection. Hand it to
+    ``protection.protect``, which adds both. A request that will be signed instead needs a header
+    from ``build_header`` with the protection certificate's subject, which a string cannot express.
+
+    Raises:
+        ValueError: ``request`` is not a DER SEQUENCE, or ``sender`` is empty.
     """
-    raise NotImplementedError("build_cr() is not implemented: RFC 9810 sec. 5.3.3")
+    if not request or request[0] != _SEQUENCE_BYTE:
+        raise ValueError("a CertReqMessages is a DER SEQUENCE")
+    if not sender:
+        raise ValueError("the sender name is empty")
+    info = []
+    if implicit_confirm:
+        info.append(general_info_implicit_confirm())
+    if cert_profile:
+        info.append(general_info_cert_profile(*cert_profile))
+    header = build_header(
+        pvno=pvno,
+        sender=directory_name_cn(sender),
+        recipient=_NULL_DN if recipient is None else directory_name_cn(recipient),
+        message_time=message_time,
+        sender_kid=sender.encode("utf-8"),
+        transaction_id=secrets.token_bytes(RECOMMENDED_NONCE_BYTES)
+        if transaction_id is None
+        else transaction_id,
+        sender_nonce=secrets.token_bytes(RECOMMENDED_NONCE_BYTES)
+        if sender_nonce is None
+        else sender_nonce,
+        general_info=info,
+    )
+    return parse(build_message(header, "cr", request))
 
 
 # --------------------------------------------------------------------------------------------

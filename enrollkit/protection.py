@@ -1,27 +1,22 @@
-"""POPOSIMESTAMP, POPOWITNESS and signature protection (RFC 9810).
+"""PKIMessage protection with a shared secret: PBM, PBMAC1 and AES-GMAC (RFC 9810 sec. 5.1.3.1).
 
-Every object in this module is a placeholder until the milestone named in ROADMAP.md lands. A
-stub raises instead of returning a plausible empty value: a protocol library that silently
-answers nothing is worse than one that refuses to answer.
+``protect`` and ``verify_protection`` apply and check it on a ``PkiMessage``. Signature protection
+(sec. 5.1.3.3) is not built and raises ``NotImplementedError`` rather than passing: see the
+``protection.signature`` row in ROADMAP.md.
 """
 
 from __future__ import annotations
 
 import hashlib
 import hmac
+import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from asn1core import Asn1Error, Node, TagClass, check_integer, decode, decode_oid
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from . import _der
-
-if TYPE_CHECKING:
-    from typing import Any
-
-    PkiMessage = Any  # placeholder: give it a real type in the milestone that needs it
-    Trust = Any  # placeholder: give it a real type in the milestone that needs it
+from .messages import PkiMessage, build_header, parse
 
 __all__ = [
     "ID_AES128_GMAC",
@@ -35,6 +30,7 @@ __all__ = [
     "PbmError",
     "PbmParameter",
     "Pbmac1Parameter",
+    "ProtectionError",
     "gmac_algorithm_identifier",
     "gmac_mac",
     "gmac_verify",
@@ -55,24 +51,6 @@ __all__ = [
 ]
 
 
-def protect(msg: PkiMessage, secret: bytes) -> PkiMessage:
-    """Pending behaviour defined by RFC 9810 sec. 5.1.3.
-
-    Not implemented yet. See the ``protection.protect()`` row in ROADMAP.md; this stub
-    raises on purpose so nothing downstream mistakes it for working code.
-    """
-    raise NotImplementedError("protect() is not implemented: RFC 9810 sec. 5.1.3")
-
-
-def verify_protection(msg: PkiMessage, trust: Trust) -> None:
-    """Pending behaviour defined by RFC 9810 sec. 5.1.3.
-
-    Not implemented yet. See the ``protection.verify_protection()`` row in ROADMAP.md;
-    this stub raises on purpose so nothing downstream mistakes it for working code.
-    """
-    raise NotImplementedError("verify_protection() is not implemented: RFC 9810 sec. 5.1.3")
-
-
 _ALG_ITEMS = 2
 _OCTET_STRING = 4
 
@@ -87,6 +65,8 @@ MIN_ITERATIONS = 100  # RFC 4211 sec. 4.4, kept by RFC 9045 sec. 4.3: "MUST be a
 MAX_ITERATIONS = 10_000_000
 _SALT_ADVISED = 8  # RFC 4211 sec. 4.4: the salt SHOULD be at least 8 octets
 
+_SHA256_OID = "2.16.840.1.101.3.4.2.1"  # RFC 9045 sec. 4.2: the MUST one-way function
+_HMAC_SHA256_OID = "1.2.840.113549.2.9"  # id-hmacWithSHA256, RFC 9045 sec. 4.4: the MUST MAC
 _OWF = {
     "1.3.14.3.2.26": "sha1",  # RFC 4211 sec. 4.4: all implementations MUST support SHA-1
     "2.16.840.1.101.3.4.2.1": "sha256",  # RFC 9045 sec. 4.2: replaces SHA-1 as the MUST
@@ -494,3 +474,145 @@ def pbmac1_mac(secret: bytes, parameter: Pbmac1Parameter, data: bytes) -> bytes:
 def pbmac1_verify(secret: bytes, parameter: Pbmac1Parameter, data: bytes, value: bytes) -> bool:
     """Constant-time comparison of a received PKIProtection against the computed PBMAC1."""
     return hmac.compare_digest(pbmac1_mac(secret, parameter, data), value)
+
+
+# --------------------------------------------------------------------------------------------
+# Applying and checking the protection of a whole message (RFC 9810 sec. 5.1.3)
+
+
+class ProtectionError(Exception):
+    """A message's protection is missing, of an unsupported kind, or does not verify."""
+
+
+def _default_parameter() -> PbmParameter:
+    # RFC 9045 sec. 4: SHA-256 is the MUST one-way function and HMAC-SHA256 the MUST MAC, and the
+    # iteration count of 10,000 is the advised figure (RFC 9045 sec. 4.3). With K = H both key
+    # rules of ``protection.pbm-hmac-key-length`` give the same key, so the default does not
+    # depend on that open question.
+    return PbmParameter(os.urandom(16), _SHA256_OID, 10_000, _HMAC_SHA256_OID)
+
+
+def _read_shared_secret_algorithm(
+    algorithm: bytes,
+) -> PbmParameter | Pbmac1Parameter | GmacParameter:
+    try:
+        node, _ = decode(algorithm, der=True)
+        oid = _oid(node.children[0])
+    except (Asn1Error, IndexError) as error:
+        raise ProtectionError(f"protectionAlg is malformed: {error}") from error
+    try:
+        if oid == ID_PASSWORD_BASED_MAC:
+            return read_pbm_algorithm(algorithm)
+        if oid == ID_PBMAC1:
+            return read_pbmac1_algorithm(algorithm)
+        if oid in _GMAC_KEY_OCTETS:
+            return read_gmac_algorithm(algorithm)
+    except PbmError as error:
+        raise ProtectionError(str(error)) from error
+    raise NotImplementedError(
+        f"protectionAlg {oid} is not a shared-secret MAC; signature protection "
+        "(RFC 9810 sec. 5.1.3.3) is the protection.signature row"
+    )
+
+
+def protect(
+    msg: PkiMessage,
+    secret: bytes,
+    *,
+    parameter: PbmParameter | Pbmac1Parameter | GmacParameter | None = None,
+    rule: str = KEY_RFC9810,
+) -> PkiMessage:
+    """Protect a message with a shared secret and return it protected, RFC 9810 sec. 5.1.3.1.
+
+    The input to the MAC is the DER ``ProtectedPart`` (sec. 5.1.3): the header, with its
+    ``protectionAlg`` set to the algorithm used, and the body. So the header is written again
+    with that field (sec. 5.1.1: "if protection bits are supplied, then this field MUST be
+    supplied") and every other header field kept as it was, then the MAC is computed over the new
+    header and the body as it travels and set as the protection. ``extraCerts`` are kept.
+
+    ``parameter`` chooses the algorithm: ``PbmParameter`` (id-PasswordBasedMac), ``Pbmac1Parameter``
+    or ``GmacParameter`` (where ``secret`` is the AES key itself). Without it, a protectionAlg the
+    header already holds is kept as written and its parameters are used; a header with none gets
+    PBM with a fresh 16-octet salt, SHA-256, 10,000 iterations and HMAC-SHA256. ``rule`` is the PBM key rule
+    (``pbm_key``). Signature protection (sec. 5.1.3.3) is not done here: see the
+    ``protection.signature`` row.
+    """
+    existing = msg.header.protection_alg
+    if parameter is None and existing is not None:
+        # keep the algorithm the header already names, byte for byte: encoders differ in whether
+        # they write NULL parameters on the OWF and the MAC, and the MAC covers those bytes
+        chosen = _read_shared_secret_algorithm(existing)
+        algorithm = existing
+    else:
+        chosen = _default_parameter() if parameter is None else parameter
+        if isinstance(chosen, PbmParameter):
+            algorithm = pbm_algorithm_identifier(chosen)
+        elif isinstance(chosen, Pbmac1Parameter):
+            algorithm = pbmac1_algorithm_identifier(chosen)
+        elif isinstance(chosen, GmacParameter):
+            algorithm = gmac_algorithm_identifier(chosen)
+        else:
+            raise TypeError("parameter is a PbmParameter, Pbmac1Parameter or GmacParameter")
+    header = msg.header
+    header_der = build_header(
+        pvno=header.pvno,
+        sender=header.sender,
+        recipient=header.recipient,
+        message_time=header.message_time,
+        protection_alg=algorithm,
+        sender_kid=header.sender_kid,
+        recip_kid=header.recip_kid,
+        transaction_id=header.transaction_id,
+        sender_nonce=header.sender_nonce,
+        recip_nonce=header.recip_nonce,
+        free_text=header.free_text,
+        general_info=header.general_info,
+    )
+    data = protected_part(header_der, msg.body_raw)
+    if isinstance(chosen, PbmParameter):
+        value = pbm_mac(secret, chosen, data, rule=rule)
+    elif isinstance(chosen, Pbmac1Parameter):
+        value = pbmac1_mac(secret, chosen, data)
+    else:
+        value = gmac_mac(secret, chosen, data)
+    parts = [header_der, msg.body_raw, _der.context(0, _der.bit_string(value))]
+    if msg.extra_certs:
+        parts.append(_der.context(1, _der.sequence(*msg.extra_certs)))
+    return parse(_der.sequence(*parts))
+
+
+def verify_protection(msg: PkiMessage, secret: bytes, *, rule: str = KEY_RFC9810) -> None:
+    """Check a message's shared-secret protection, RFC 9810 sec. 5.1.3.1; return if it verifies.
+
+    The MAC is recomputed over the ``ProtectedPart`` made of the header and body bytes that
+    arrived (``msg.protected_part``) and compared in constant time with the protection. The
+    algorithm is read from ``protectionAlg``: id-PasswordBasedMac (also with an AES-GMAC MAC),
+    id-PBMAC1, or an AES-GMAC identifier, where ``secret`` is the AES key. Nothing is tolerated
+    that sec. 5.1.1 forbids: protection without ``protectionAlg``, or the reverse, is refused.
+    A signature algorithm raises ``NotImplementedError`` (row ``protection.signature``), never a
+    silent pass. This does not judge the rest of the header; ``messages.check_header_9483`` does.
+
+    Raises:
+        ProtectionError: no protection, a mismatch between protection and protectionAlg, an
+            algorithm outside the shared-secret set, parameters outside policy, or a wrong MAC.
+        NotImplementedError: a signature-based protectionAlg.
+    """
+    algorithm = msg.header.protection_alg
+    if msg.protection is None:
+        raise ProtectionError(
+            "the message carries no protection"
+            if algorithm is None
+            else "protectionAlg is present but the message carries no protection"
+        )
+    if algorithm is None:
+        raise ProtectionError("protection is present but protectionAlg is missing (sec. 5.1.1)")
+    parameter = _read_shared_secret_algorithm(algorithm)
+    data = msg.protected_part
+    if isinstance(parameter, PbmParameter):
+        ok = pbm_verify(secret, parameter, data, msg.protection, rule=rule)
+    elif isinstance(parameter, Pbmac1Parameter):
+        ok = pbmac1_verify(secret, parameter, data, msg.protection)
+    else:
+        ok = gmac_verify(secret, parameter, data, msg.protection)
+    if not ok:
+        raise ProtectionError("the protection does not verify under this secret")
