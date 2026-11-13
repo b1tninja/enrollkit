@@ -23,31 +23,44 @@ drift apart within one release, and the document becomes useless exactly when it
 | Obligation | Spec | Status | Where | Milestone |
 |---|---|---|---|---|
 | `messages.build_cr()` | RFC 9810 sec. 5.3.3 | `[ ]` | `tests/test_obligations.py::test_build_cr` (to be written) | M1 |
-| `messages.parse()` | RFC 9810 sec. 5.1 | `[ ]` | `tests/test_obligations.py::test_parse` (to be written) | M1 |
+| `messages.parse()` | RFC 9810 sec. 5.1 | `[ok]` | `tests/test_flow.py::test_parse_splits_message_into_header_body_protection_and_extra_certs` | M1 |
 | `messages.parse_header()` | RFC 9810 sec. 5.1.1 | `[ok]` | `tests/test_pkiheader.py::test_transaction_id_is_echoed_and_nonce_lengths_are_reported`, `tests/test_pkiheader.py::test_tag_order_violation_refused`, `tests/test_pkiheader.py::test_header_with_trailing_bytes_refused` | M1 |
 | `messages.check_transaction_echo()` | RFC 9810 sec. 5.1.1 | `[ok]` | `tests/test_pkiheader.py::test_transaction_id_is_echoed_and_nonce_lengths_are_reported` | M1 |
 | `messages.is_null_dn()` | RFC 9810 sec. 5.1.1 | `[ok]` | `tests/test_pkiheader.py::test_null_dn_sender_is_recognised` | M1 |
-| `messages.header-build` | RFC 9810 sec. 5.1.1, sec. 7 | `[ ]` | `tests/test_pkiheader.py::test_build_header_round_trips` (to be written) | M1 |
-| `messages.header-9483` | RFC 9483 sec. 3.1 | `[ ]` | `tests/test_profile_9483.py::test_header_profile_rules` (to be written) | M1 |
+| `messages.header-build` | RFC 9810 sec. 5.1.1, sec. 7 | `[ok]` | `tests/test_profile_9483.py::test_build_header_round_trips` | M1 |
+| `messages.header-9483` | RFC 9483 sec. 3.1 | `[ok]` | `tests/test_profile_9483.py::test_header_profile_rules`, `tests/test_profile_9483.py::test_header_profile_mac_sender_and_general_info` | M1 |
 | `messages.vectors` | research | `[ ]` | `tests/test_vectors.py::test_independent_encoder_agrees` (to be written) | M1 |
 | `protection.protect()` | RFC 9810 sec. 5.1.3 | `[ ]` | `tests/test_obligations.py::test_protect` (to be written) | M2 |
 | `protection.verify_protection()` | RFC 9810 sec. 5.1.3 | `[ ]` | `tests/test_obligations.py::test_verify_protection` (to be written) | M2 |
-| `protection.pbm` | RFC 4211, RFC 9045, RFC 9481 | `[ ]` | `tests/test_protection.py::test_pbm_known_answer` (to be written) | M2 |
+| `protection.pbm` | RFC 4211, RFC 9045, RFC 9481 | `[part]` | `tests/test_protection.py::test_pbm_known_answer`, `tests/test_protection.py::test_pbm_algorithm_identifier_round_trips_and_policy` | M2 |
 | `protection.nonce-replay` | RFC 9810 sec. 5.1.1 | `[ ]` | `tests/test_protection.py::test_recip_nonce_must_echo_sender_nonce` (to be written) | M2 |
 | `crmf.build_request()` | RFC 4211 sec. 5 | `[ ]` | `tests/test_obligations.py::test_build_request` (to be written) | M3 |
-| `crmf.pop` | RFC 4211, RFC 9810 sec. 4.3 | `[ ]` | `tests/test_crmf.py::test_proof_of_possession_verifies` (to be written) | M3 |
+| `crmf.pop` | RFC 4211, RFC 9810 sec. 4.3 | `[part]` | `tests/test_crmf.py::test_proof_of_possession_verifies`, `tests/test_crmf.py::test_pop_refuses_tampering_wrong_key_and_missing_pieces` | M3 |
 | `flow.enroll()` | RFC 9810 | `[ ]` | `tests/test_obligations.py::test_enroll` (to be written) | M4 |
 | `flow.poll_until_ready()` | RFC 9810 sec. 5.3.22 | `[ ]` | `tests/test_obligations.py::test_poll_until_ready` (to be written) | M4 |
-| `flow.ir_cr_exchange` | RFC 9810 sec. 5.3.1 to 5.3.4 | `[ ]` | `tests/test_flow.py::test_ir_ip_exchange` (to be written) | M4 |
-| `flow.confirm` | RFC 9810 sec. 5.3.18, sec. 5.1.1.1 | `[ ]` | `tests/test_flow.py::test_certconf_unless_implicit_confirm_granted` (to be written) | M4 |
-| `flow.errors` | RFC 9810 sec. 5.3.21 | `[ ]` | `tests/test_flow.py::test_error_message_is_surfaced` (to be written) | M4 |
+| `flow.ir_cr_exchange` | RFC 9810 sec. 5.3.1 to 5.3.4 | `[ok]` | `tests/test_flow.py::test_ir_ip_exchange`, `tests/test_flow.py::test_exchange_refuses_wrong_echo_and_wrong_body`, `tests/test_flow.py::test_exchange_waiting_rejection_and_error` | M4 |
+| `flow.confirm` | RFC 9810 sec. 5.3.18, sec. 5.1.1.1 | `[part]` | `tests/test_flow.py::test_implicit_confirm_skips_certconf_only_when_granted` | M4 |
+| `flow.errors` | RFC 9810 sec. 5.3.21 | `[part]` | `tests/test_flow.py::test_exchange_waiting_rejection_and_error` | M4 |
 | `http.cmp` | RFC 9811 | `[ ]` | `tests/test_http.py::test_well_known_cmp_uri` (to be written) | M4 |
 | `est.simple_enroll()` | RFC 7030 sec. 4.2.1 | `[ ]` | `tests/test_obligations.py::test_simple_enroll` (to be written) | M5 |
 | `est.ca_certs()` | RFC 7030 sec. 4.1, RFC 8951 sec. 3 | `[ ]` | `tests/test_obligations.py::test_ca_certs` (to be written) | M5 |
-| `est.cms_response` | RFC 7030 sec. 4.1.3, RFC 8951 sec. 3, RFC 10002 sec. 4.1, RFC 5652 | `[ ]` | `tests/test_est_cacerts.py::test_response_accepts_missing_content_transfer_encoding` (to be written) | M5 |
+| `est.cms_response` | RFC 7030 sec. 4.1.3, RFC 8951 sec. 3, RFC 10002 sec. 4.1, RFC 5652 | `[ok]` | `tests/test_est_cacerts.py::test_response_accepts_missing_content_transfer_encoding`, `tests/test_est_cacerts.py::test_response_refuses_what_is_not_a_certs_only_response` | M5 |
+| `est.cacerts-parse` | RFC 7030 sec. 4.1.3: `est.cacerts_response` unwraps the certs-only SignedData through signeddata and parses each certificate with asn1core; choosing the TA and the Root CA Key Update certificates is `trust.explicit_ta` | `[ok]` | `tests/test_est_cacerts.py::test_cacerts_response_parses_each_certificate_with_asn1core` | M5 |
 | `est.csrattrs` | RFC 7030 sec. 4.5, RFC 9908 | `[ ]` | `tests/test_est_csrattrs.py::test_attr_or_oid_choice_parses` (to be written) | M5 |
 | `est.serverkeygen` | RFC 7030 sec. 4.4 | `[ ]` | `tests/test_est_serverkeygen.py::test_multipart_response` (to be written) | M5 |
 | `trust.explicit_ta` | RFC 7030 sec. 4.1.3 | `[ ]` | `tests/test_trust.py::test_cacerts_become_explicit_ta` (to be written) | M5 |
+| `messages.build_message` | RFC 9810 sec. 5.1 | `[part]` | `tests/test_flow.py::test_parse_splits_message_into_header_body_protection_and_extra_certs` | M1 |
+| `messages.body-readers` | RFC 9810 sec. 5.3 | `[part]` | `tests/test_flow.py::test_ir_ip_exchange` | M1 |
+| `messages.body-builders` | RFC 9810 sec. 5.3.1 to 5.3.4, 5.3.18, 5.3.22 | `[ ]` | `tests/test_messages_bodies.py::test_ir_cr_certconf_pollreq_round_trip` (to be written) | M1 |
+| `protection.pbm-external-vector` | RFC 4211 sec. 4.4 | `[ ]` | `tests/test_protection.py::test_pbm_matches_openssl_capture` (to be written) | M2 |
+| `protection.pbm-hmac-key-length` | RFC 9810 sec. 5.1.3.1 | `[ ]` | `tests/test_protection.py::test_expansion_agrees_with_a_second_implementation` (to be written) | M2 |
+| `protection.pbmac1-gmac` | RFC 9045 sec. 3 and 4.4, RFC 9481 sec. 6.1.2 | `[ ]` | `tests/test_protection.py::test_pbmac1_and_aes_gmac` (to be written) | M2 |
+| `protection.signature` | RFC 9810 sec. 5.1.3.3, RFC 9481 sec. 3 | `[ ]` | `tests/test_protection.py::test_signature_protection_round_trip` (to be written) | M2 |
+| `crmf.pop-cases-1-2` | RFC 4211 sec. 4.1 | `[ ]` | `tests/test_crmf.py::test_poposk_input_with_sender_and_publickeymac` (to be written) | M3 |
+| `crmf.pop-key-encipherment` | RFC 4211 sec. 4.2, 4.3, RFC 9810 sec. 5.2.8 | `[ ]` | `tests/test_crmf.py::test_encr_cert_and_challenge_response` (to be written) | M3 |
+| `crmf.template-fields` | RFC 4211 sec. 5 | `[ ]` | `tests/test_crmf.py::test_template_extensions_and_controls` (to be written) | M3 |
+| `flow.pollreq` | RFC 9810 sec. 5.3.22 | `[ ]` | `tests/test_flow.py::test_poll_request_and_response_bodies` (to be written) | M4 |
+| `est.cacerts-validation` | RFC 7030 sec. 4.1.3 | `[ ]` | `tests/test_est_cacerts.py::test_root_validated_out_of_band_before_chain` (to be written) | M5 |
 | `signer.interface` | design | `[ ]` | `tests/test_signer.py::test_callable_signer_is_the_only_key_access` (to be written) | M2 |
 
 ## 2. Milestones
@@ -125,3 +138,15 @@ The group A review proposed that enrollkit only accept a signer callback because
 | RFC 9810 sec. 5.1.1: nonce and transactionID sizes are recommendations, not receiver-enforced minimums; the parser reports short values and refuses none | `read('RFC9810§5.1.1')` | `messages.parse_header()` |
 | RFC 7030 sec. 4.1.3 still cites RFC 4210 sec. 4.4 for Root CA Key Update; RFC 9810 sec. 4.4 is titled "Root CA Key Update" | `outline('RFC9810')` | `est.cms_response` |
 | The review left pvno cmp2021 as unconfirmed; RFC 9810 sec. 5.1.1 gives cmp2021(3) | `read('RFC9810§5.1.1')` | `messages.parse_header()` |
+
+## 9. Research findings, round 2 (2026-11-13)
+
+| Finding | Evidence | Row |
+|---|---|---|
+| RFC 4211 sec. 4.1 case 3 prints "DER-encoded certificate template"; verified erratum 4797 makes the signature cover the DER `certReq` (the CertRequest). `crmf.sign_pop` signs `certReq` and the test verifies the bytes with `cryptography` directly | `errata('RFC4211')`, `tests/test_crmf.py::test_proof_of_possession_verifies` | `crmf.pop` |
+| RFC 9045 changes PBM requirements: SHA-256 is the MUST OWF, HMAC-SHA256 the MUST MAC, iterationCount minimum stays 100 with 10,000 advised, the password SHOULD NOT be reused; AES-GMAC 128 with a 16-octet tag is a SHOULD. RFC 9045 has no errata | `read('RFC9045§4')`, `errata('RFC9045')` | `protection.pbm` |
+| RFC 9810 sec. 5.1.3.1 MUST-requires the key expansion `BASEKEY, then OWF("1" concatenated with BASEKEY), and so on` when K > H, but neither it nor RFC 4211 or 9045 says what K is for HMAC. `pbm_key` takes K as the MAC hash's output size; no second implementation has confirmed it | `read('RFC9810§5.1.3.1')` | `protection.pbm-hmac-key-length` |
+| RFC 9483 sec. 3.1: pvno 3 only where EnvelopedData is used or a certConf carries hashAlg, else 2; protectionAlg, transactionID and senderNonce REQUIRED; transactionID and senderNonce exactly 128 bits; recipNonce absent in the first message; implicitConfirm prohibited outside ir/cr/kur/p10cr and ip/cp/kup; certProfile only in ir/cr/kur/p10cr and genm. `check_header_9483` implements every one that needs no certificate | `read('RFC9483§3.1')` | `messages.header-9483` |
+| CMP generalInfo OIDs, from RFC 9810 sec. 5.1.1.1, 5.1.1.2, 5.1.1.4 (id-it 13, 14, 21; id-it is id-pkix 4) | `grep('RFC9810', 'id-it-')` | `messages.header-build` |
+| `signeddata.cms.certificates_only` and `cms.load` exist, so `est.cms_response` stands on them; enrollkit now resolves `../signeddata` by sibling path as it does asn1core | `signeddata/signeddata/cms.py` | `est.cms_response` |
+| `pyproject.toml` pins `cryptography>50.0.2` while the interpreter here has 46.0.7 installed; the suite passes on it. Someone should confirm the pin is intended | `python -c "import cryptography"` | none |

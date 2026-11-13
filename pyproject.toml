@@ -38,9 +38,12 @@ classifiers = [
 # used. It is not on an index yet, so until it publishes it resolves from the sibling checkout
 # (see pythonpath and mypy_path below), exactly as pkix resolves it; CI checks it out into .deps/.
 #
+# signeddata is ours (CMS) and reads the certs-only SignedData of an EST /cacerts response; it
+# resolves from the sibling checkout the same way.
+#
 # cryptography is admitted for cryptographic primitives only (signatures, MAC and key derivation
 # building blocks, AES). Nothing that parses a wire format may import it.
-dependencies = ["asn1core", "cryptography>50.0.2"]
+dependencies = ["asn1core", "signeddata", "cryptography>=46.0.7"]
 
 [project.optional-dependencies]
 dev = [
@@ -78,7 +81,7 @@ include = ["/enrollkit/", "/tests/", "/docs/", "/README.md", "/ROADMAP.md", "/CH
 testpaths = ["tests"]
 # "../asn1core" resolves the codec from the sibling checkout in this workspace. It is not on an
 # index yet, so a standalone clone cannot run the suite until asn1core publishes.
-pythonpath = [".", "../asn1core"]
+pythonpath = [".", "../asn1core", "../signeddata"]
 asyncio_mode = "auto"
 addopts = "-ra"
 
@@ -91,7 +94,7 @@ source = ["enrollkit"]
 # coverage for the line that raises. Raise this in the commit that implements a
 # milestone, never in a commit that only adds tests, so the number keeps meaning
 # "this behaviour is exercised" rather than "this file was imported".
-fail_under = 45
+fail_under = 80
 show_missing = true
 exclude_lines = [
   "if __name__ == .__main__.:",
@@ -126,7 +129,7 @@ indent-style = "space"
 [tool.mypy]
 python_version = "3.12"
 # Checked against asn1core's own annotations when the sibling checkout is present.
-mypy_path = "../asn1core"
+mypy_path = "../asn1core:../signeddata"
 warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true

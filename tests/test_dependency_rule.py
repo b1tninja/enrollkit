@@ -16,9 +16,9 @@ import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "enrollkit"
-ALLOWED = set(sys.stdlib_module_names) | {"enrollkit", "asn1core", "cryptography"}
+ALLOWED = set(sys.stdlib_module_names) | {"enrollkit", "asn1core", "cryptography", "signeddata"}
 # Modules that hold primitives; everything else that reads a wire format stays free of it.
-MAY_IMPORT_CRYPTOGRAPHY = {"protection.py", "trust.py"}
+MAY_IMPORT_CRYPTOGRAPHY = {"protection.py", "trust.py", "crmf.py"}
 
 
 def imported_roots(path: pathlib.Path) -> set[str]:
