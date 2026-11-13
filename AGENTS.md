@@ -51,8 +51,8 @@ rather than merely incomplete.
    Never return an empty value, an empty collection, or a result object that reports
    success. A protocol library that answers nothing is worse than one that refuses
    to answer, and `tests/test_public_api.py` enforces that every stub is loud.
-3. **Normative text is never paraphrased from memory.** Fetch it with `rfclib` and
-   cite the section. If the text you fetch does not say what the obligation claims,
+3. **Normative text is never paraphrased from memory.** Fetch it with the `rfc_*`
+   tools and cite the section. If the text you fetch does not say what the obligation claims,
    the obligation is wrong: fix the roadmap row and say so in the commit.
 4. **Dependencies.** `pyproject.toml` declares two runtime dependencies: asn1core (ours, resolved from the sibling `../asn1core` until it publishes) and `cryptography`, which is allowed for cryptographic primitives only (signatures, MAC and key derivation building blocks, AES). Every ASN.1 structure, certificate and CMP or EST wire format is ours on asn1core; `asn1crypto` and similar libraries are not used, and `tests/test_dependency_rule.py` enforces it. Adding a runtime
    dependency needs a paragraph of justification in `docs/strategy.md` explaining
@@ -70,7 +70,7 @@ rather than merely incomplete.
 
 ## Protocol work
 
-`.clinerules/10-rfclib.md` describes the `rfclib` calls to make for each obligation
+`.clinerules/10-rfclib.md` describes the `rfc_*` tool calls to make for each obligation
 and lists the section refs for this project. If you are not running in Cline, the
 same procedure applies: confirm the document, read its errata, pull the normative
 statements, then write code.
