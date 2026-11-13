@@ -10,6 +10,15 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING
 
+from .bodies import (
+    PKI_STATUS_ACCEPTED,
+    PKI_STATUS_GRANTED_WITH_MODS,
+    PKI_STATUS_REJECTION,
+    PKI_STATUS_WAITING,
+    POLL_ALL,
+    read_error,
+    read_poll_rep,
+)
 from .messages import ID_IT_IMPLICIT_CONFIRM as _IMPLICIT
 from .messages import (
     HeaderError,
@@ -30,6 +39,9 @@ if TYPE_CHECKING:
 
 __all__ = [
     "PKI_STATUS_ACCEPTED",
+    "PKI_STATUS_GRANTED_WITH_MODS",
+    "PKI_STATUS_REJECTION",
+    "PKI_STATUS_WAITING",
     "ExchangeError",
     "ExchangeState",
     "IrCrExchange",
@@ -59,11 +71,7 @@ async def poll_until_ready(endpoint: str, transaction: bytes, budget: Budget) ->
 # --------------------------------------------------------------------------------------------
 # The ir/ip and cr/cp exchange as pure state (RFC 9810 sec. 5.3.1 to 5.3.4, 5.3.18, 5.3.22).
 
-# PKIStatus values, RFC 9810 sec. 5.2.3.
-PKI_STATUS_ACCEPTED = 0
-PKI_STATUS_GRANTED_WITH_MODS = 1
-PKI_STATUS_REJECTION = 2
-PKI_STATUS_WAITING = 3
+# PKIStatus values, RFC 9810 sec. 5.2.3, are defined in ``bodies`` and re-exported here.
 
 
 class ExchangeError(Exception):
@@ -106,6 +114,9 @@ class IrCrExchange:
         self._header = request_header
         self._last_sender_nonce = request_header.sender_nonce
         self._granted = False
+        self.pending_ids: tuple[int, ...] = ()
+        self.check_after: int | None = None
+        self._next_poll_at: float | None = None
 
     @property
     def response_body(self) -> str:
@@ -122,14 +133,39 @@ class IrCrExchange:
         self._last_sender_nonce = sender_nonce
         self.state = ExchangeState.AWAITING_PKICONF
 
-    def poll_sent(self, sender_nonce: bytes | None = None) -> None:
-        """Record that a pollReq went out while WAITING, with its senderNonce."""
+    def poll_sent(self, sender_nonce: bytes | None = None, *, now: float | None = None) -> None:
+        """Record that a pollReq went out while WAITING, with its senderNonce.
+
+        RFC 9810 sec. 5.3.22 item 3: after a pollRep the end entity waits "at least the number of
+        seconds given in the checkAfter field before sending another pollReq". The exchange has no
+        clock; pass ``now`` (seconds, on the same scale as the ``now`` given to ``receive``) and a
+        poll sent too early raises ``ExchangeError``. Without ``now`` nothing is enforced.
+        """
         self._require(ExchangeState.WAITING, "poll_sent")
+        if now is not None and self._next_poll_at is not None and now < self._next_poll_at:
+            raise ExchangeError(
+                f"a pollReq {self._next_poll_at - now:.0f} seconds before checkAfter allows"
+            )
         self._last_sender_nonce = sender_nonce
+        self._next_poll_at = None
         self.state = ExchangeState.AWAITING_RESPONSE
 
-    def receive(self, message: PkiMessage) -> ExchangeState:
-        """Feed one received message and return the new state."""
+    def poll_request_ids(self) -> tuple[int, ...]:
+        """The certReqIds the next pollReq carries (sec. 5.3.22 item 1).
+
+        The ids of the CertResponses still "waiting", or ``(-1,)`` (``POLL_ALL``) when the
+        whole response is pending, as after an ``error`` message with status "waiting" or a
+        ``pollRep`` for the complete response.
+        """
+        self._require(ExchangeState.WAITING, "poll_request_ids")
+        return self.pending_ids
+
+    def receive(self, message: PkiMessage, *, now: float | None = None) -> ExchangeState:
+        """Feed one received message and return the new state.
+
+        ``now`` is the receive time in seconds; it is used only to enforce ``checkAfter`` on the
+        next ``poll_sent``.
+        """
         if self.state not in {ExchangeState.AWAITING_RESPONSE, ExchangeState.AWAITING_PKICONF}:
             raise ExchangeError(f"no message is expected in state {self.state.value}")
         header = message.header
@@ -143,7 +179,17 @@ class IrCrExchange:
             raise ExchangeError("recipNonce does not echo our senderNonce")
         name = message.body_name
         if name == "error":
-            self.state = ExchangeState.FAILED
+            try:
+                waiting = read_error(message).status_info.status == PKI_STATUS_WAITING
+            except MessageError:
+                waiting = False  # an unreadable error still ends the transaction
+            if waiting and self.state is ExchangeState.AWAITING_RESPONSE:
+                # RFC 9810 sec. 5.3.21 para 4: poll; ErrorMsgContent has no certReqId, so the
+                # pollReq names the whole response with -1 (sec. 5.3.22 item 1).
+                self.pending_ids = (POLL_ALL,)
+                self.state = ExchangeState.WAITING
+            else:
+                self.state = ExchangeState.FAILED
             return self.state
         if self.state is ExchangeState.AWAITING_PKICONF:
             if name != "pkiconf":
@@ -151,6 +197,16 @@ class IrCrExchange:
             self.state = ExchangeState.DONE
             return self.state
         if name == "pollRep":
+            if self.state is not ExchangeState.AWAITING_RESPONSE:
+                raise ExchangeError("a pollRep is only an answer to a pollReq")
+            try:
+                entries = read_poll_rep(message)
+            except MessageError as error:
+                raise ExchangeError(str(error)) from error
+            if not entries:
+                raise ExchangeError("a pollRep with no entry")
+            self.check_after = max(entry.check_after for entry in entries)
+            self._next_poll_at = None if now is None else now + self.check_after
             self.state = ExchangeState.WAITING
             return self.state
         if name != self.response_body:
@@ -164,6 +220,7 @@ class IrCrExchange:
         self.statuses = tuple(r.status for r in responses)
         self._granted = _IMPLICIT in _info_oids(header)
         if all(s == PKI_STATUS_WAITING for s in self.statuses):
+            self.pending_ids = tuple(r.cert_req_id for r in responses)
             self.state = ExchangeState.WAITING
         elif all(s in {PKI_STATUS_ACCEPTED, PKI_STATUS_GRANTED_WITH_MODS} for s in self.statuses):
             skip = self.implicit_confirm and self._granted

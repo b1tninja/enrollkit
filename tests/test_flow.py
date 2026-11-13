@@ -11,6 +11,16 @@ from __future__ import annotations
 import pytest
 from test_pkiheader import ALG, NAME, NONCE, NULL_DN, TXID, integer, tlv
 
+from enrollkit.bodies import (
+    PKI_STATUS_WAITING,
+    POLL_ALL,
+    PollEntry,
+    error_content,
+    pki_status_info,
+    poll_rep_content,
+    poll_req_content,
+    read_poll_req,
+)
 from enrollkit.flow import ExchangeError, ExchangeState, IrCrExchange
 from enrollkit.messages import (
     CMP_2000,
@@ -129,3 +139,49 @@ def test_parse_splits_message_into_header_body_protection_and_extra_certs():
         parse(tlv(0x30, header + tlv(0x80 | 0x20 | 31, b"")))  # a body tag past [26]
     with pytest.raises(MessageError):
         parse(tlv(0x30, header))  # no body
+
+
+def test_poll_request_and_response_bodies():
+    """RFC 9810 sec. 5.3.22: what the pollReq names, and waiting out checkAfter."""
+    ex = IrCrExchange("ir", request_header())
+    ex.request_sent()
+    assert ex.receive(reply("ip", cert_rep(3, 3)), now=100.0) is ExchangeState.WAITING
+    assert ex.poll_request_ids() == (0, 1)  # the certReqIds of the CertResponses still waiting
+    body = poll_req_content(*ex.poll_request_ids())
+    assert read_poll_req(reply("pollReq", body)) == (0, 1)
+    ex.poll_sent(sender_nonce=b"\x05" * 16, now=100.0)
+    answer = poll_rep_content([PollEntry(0, 30, ("busy",)), PollEntry(1, 10)])
+    waiting = reply("pollRep", answer, recip_nonce=b"\x05" * 16)
+    assert ex.receive(waiting, now=101.0) is ExchangeState.WAITING
+    assert ex.check_after == 30  # the longest wait named
+    with pytest.raises(ExchangeError, match="checkAfter"):
+        ex.poll_sent(sender_nonce=b"\x06" * 16, now=120.0)  # 11 seconds early
+    assert ex.state is ExchangeState.WAITING  # the refusal changed nothing
+    ex.poll_sent(sender_nonce=b"\x06" * 16, now=131.0)
+    done = reply("ip", cert_rep(0, 0), recip_nonce=b"\x06" * 16)
+    assert ex.receive(done) is ExchangeState.NEEDS_CONFIRM
+
+
+def test_error_with_status_waiting_starts_polling_for_the_whole_response():
+    """RFC 9810 sec. 5.3.21 para 4 and sec. 5.3.22 item 1: the pollReq then names -1."""
+    ex = IrCrExchange("cr", request_header())
+    ex.request_sent()
+    waiting = error_content(pki_status_info(PKI_STATUS_WAITING))
+    assert ex.receive(reply("error", waiting)) is ExchangeState.WAITING
+    assert ex.poll_request_ids() == (POLL_ALL,)
+    ex.poll_sent(sender_nonce=b"\x05" * 16)
+    refusal = error_content(pki_status_info(2))
+    assert ex.receive(reply("error", refusal, recip_nonce=b"\x05" * 16)) is ExchangeState.FAILED
+    with pytest.raises(ExchangeError):
+        ex.poll_request_ids()  # not waiting any more
+
+
+def test_a_pollrep_must_answer_a_pollreq_and_be_well_formed():
+    ex = IrCrExchange("ir", request_header())
+    with pytest.raises(ExchangeError):
+        ex.receive(reply("pollRep", poll_rep_content([PollEntry(0, 5)])))  # nothing sent yet
+    ex.request_sent()
+    with pytest.raises(ExchangeError, match="no entry"):
+        ex.receive(reply("pollRep", b"0\x00"))
+    with pytest.raises(ExchangeError):
+        ex.receive(reply("pollRep", b"0\x03\x02\x01\x00"))

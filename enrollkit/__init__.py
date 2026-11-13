@@ -5,7 +5,7 @@ CMP was rewritten in 2025-07.
 
 from __future__ import annotations
 
-from . import apps, cli, crmf, est, flow, http, messages, protection, trust
+from . import apps, bodies, cli, crmf, est, flow, http, messages, protection, trust
 from .crmf import build_request
 from .est import ca_certs, simple_enroll
 from .flow import enroll, poll_until_ready
@@ -17,6 +17,7 @@ __version__ = "0.1.0"
 __all__ = [
     "__version__",
     "apps",
+    "bodies",
     "build_cr",
     "build_request",
     "ca_certs",
