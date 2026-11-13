@@ -32,7 +32,15 @@ classifiers = [
 ]
 # Empty unless a module cannot be honest without it. Every entry needs a sentence in
 # README.md explaining why the zero-dependency rule was broken for it.
-dependencies = ["asn1crypto>1.5.1", "cryptography>50.0.2"]
+#
+# asn1core is ours and carries every DER structure this project reads or writes: the CMP and
+# CRMF message definitions are written here, on asn1core, and no third-party ASN.1 library is
+# used. It is not on an index yet, so until it publishes it resolves from the sibling checkout
+# (see pythonpath and mypy_path below), exactly as pkix resolves it; CI checks it out into .deps/.
+#
+# cryptography is admitted for cryptographic primitives only (signatures, MAC and key derivation
+# building blocks, AES). Nothing that parses a wire format may import it.
+dependencies = ["asn1core", "cryptography>50.0.2"]
 
 [project.optional-dependencies]
 dev = [
@@ -68,7 +76,9 @@ include = ["/enrollkit/", "/tests/", "/docs/", "/README.md", "/ROADMAP.md", "/CH
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+# "../asn1core" resolves the codec from the sibling checkout in this workspace. It is not on an
+# index yet, so a standalone clone cannot run the suite until asn1core publishes.
+pythonpath = [".", "../asn1core"]
 asyncio_mode = "auto"
 addopts = "-ra"
 
@@ -92,6 +102,9 @@ exclude_lines = [
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+# CI checks asn1core out into .deps/ to satisfy an unpublished dependency; linting a borrowed
+# checkout would make this project's gate depend on another project's style.
+extend-exclude = [".deps"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "N", "UP", "SIM", "C4", "PT", "RUF", "S", "RET", "ARG"]
@@ -112,6 +125,8 @@ indent-style = "space"
 
 [tool.mypy]
 python_version = "3.12"
+# Checked against asn1core's own annotations when the sibling checkout is present.
+mypy_path = "../asn1core"
 warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true

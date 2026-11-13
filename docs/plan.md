@@ -28,12 +28,25 @@ dependency chain.
   exists as code.** It has source files and a test suite of its own, and its own README states
   its release status. That it exists does not say it provides what a row here needs: which
   capability a row consumes is decided row by row.
+- **signeddata** - an EST `/cacerts` response is a certs-only CMC Simple PKI Response, which is a
+  CMS SignedData with no signers (RFC 7030 sec. 4.1.3, RFC 10002 sec. 2, RFC 5652), and CMP protection
+  by signature and EnvelopedData both ride on CMS. This dependency was missing from the plan.
+  **Status: exists as a shell.** `signeddata.cms.load()` is a loud stub, so every row that reads a
+  CMS structure here (`est.cms_response`, `est.ca_certs()`) is blocked until that row has a passing
+  test there; `messages.parse_header()` needs only asn1core and is not blocked.
 
 **Gated by coverage, not by absence.** asn1core now has code and a test suite, so enrollkit is
 no longer waiting for the project to exist. It is still waiting for the structures it needs: a
 roadmap row that parses, encodes or verifies a DER structure cites the asn1core capability it
 consumes, and stays deferred until that capability has a passing test there. No release of
 enrollkit is promised before asn1core has one of its own.
+
+## Dependency rule
+
+The runtime dependencies are asn1core (every DER structure, by sibling path) and `cryptography` for
+cryptographic primitives only. No third-party ASN.1 library is used; `asn1crypto` was removed on
+2026-11-13 and `tests/test_dependency_rule.py` fails if it, or an import of `cryptography` from a
+wire-format module, returns.
 
 ## Sequencing rules
 

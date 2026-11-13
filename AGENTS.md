@@ -54,7 +54,7 @@ rather than merely incomplete.
 3. **Normative text is never paraphrased from memory.** Fetch it with `rfclib` and
    cite the section. If the text you fetch does not say what the obligation claims,
    the obligation is wrong: fix the roadmap row and say so in the commit.
-4. **Dependencies.** `pyproject.toml` here declares these runtime dependencies: asn1crypto 1.5.1, cryptography 50.0.2. Adding a runtime
+4. **Dependencies.** `pyproject.toml` declares two runtime dependencies: asn1core (ours, resolved from the sibling `../asn1core` until it publishes) and `cryptography`, which is allowed for cryptographic primitives only (signatures, MAC and key derivation building blocks, AES). Every ASN.1 structure, certificate and CMP or EST wire format is ours on asn1core; `asn1crypto` and similar libraries are not used, and `tests/test_dependency_rule.py` enforces it. Adding a runtime
    dependency needs a paragraph of justification in `docs/strategy.md` explaining
    why the standard library is not enough.
 5. **Scope.** What is deliberately absent is listed under Non-goals in `README.md`.

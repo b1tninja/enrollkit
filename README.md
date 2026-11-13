@@ -6,8 +6,8 @@
 -->
 
 **Pre-alpha shell.** The package surface, the obligation matrix and the CI gates exist.
-No protocol behaviour is implemented: every public function raises `NotImplementedError`,
-and the test suite records that rather than hiding it. Read
+One behaviour is implemented, `messages.parse_header()` (RFC 9810 sec. 5.1.1); every other
+public function raises `NotImplementedError`, and the test suite records that rather than hiding it. Read
 [ROADMAP.md](ROADMAP.md) before depending on any of it.
 
 enrollkit -- CMP and EST clients for private PKIs
@@ -47,6 +47,9 @@ document, which is the honest grain size for a plan. See [docs/rfc-map.md](docs/
 | RFC 9481 | Proposed Standard | 2023-11 | the algorithm set CMP must and may support |
 | RFC 4211 | Proposed Standard | 2005-09 | CRMF: the certificate request message CMP carries |
 | RFC 7030 | Proposed Standard | 2013-10 | EST: enrollment over HTTPS with CMC, plus CA certificate retrieval |
+| RFC 9483 | Proposed Standard | 2023-11 | the lightweight CMP profile real industrial and IoT deployments implement |
+| RFC 8951 | Proposed Standard | 2020-11 | EST clarification: base64 transfer, Content-Transfer-Encoding ignored |
+| RFC 10002 | Proposed Standard | 2026-07 | CMC, current: obsoletes RFC 5272, which RFC 7030 still cites; EST `/cacerts` returns its certs-only response |
 
 ### Errata watch
 
@@ -54,6 +57,7 @@ document, which is the honest grain size for a plan. See [docs/rfc-map.md](docs/
 - RFC 7030 carries 3 verified errata and is updated by RFC 8951, RFC 8996 and RFC 9908.
 - RFC 4211 carries 2 verified errata and is updated by RFC 9045. RFC 9811 obsoletes RFC 6712 and, with RFC 9810, RFC 9480.
 - RFC 4210 is OBSOLETE: cite it only when explaining a legacy server.
+- RFC 9483 carries 6 verified errata as of 2026-11-13, and RFC 5272 is OBSOLETE (RFC 10002); see [docs/rfc-map.md](docs/rfc-map.md).
 
 ## Module layout
 
@@ -77,7 +81,7 @@ document, which is the honest grain size for a plan. See [docs/rfc-map.md](docs/
 
 ## Why this project has a runtime dependency
 
-CMP messages are deep ASN.1 inside CMS. Writing that schema layer again would be the third Python implementation of the same structures, so definitions come from asn1crypto and primitives from cryptography. What this project owns is the protocol: message order, protection, and recovery from the failures.
+CMP messages are deep ASN.1 inside CMS. Writing that schema layer again would be the third Python implementation of the same structures, so the definitions are written here, on asn1core, the portfolio's own DER codec that keeps the bytes it parsed. The `cryptography` package is used for cryptographic primitives only (signatures, MACs, AES) and never to read a wire format. What this project owns is the protocol: message order, protection, and recovery from the failures.
 
 Declared as a floor with no ceiling: the application that installs this library resolves the final set, and a ceiling inside a library guarantees a conflict the first time something else needs a newer line.
 ## Install
